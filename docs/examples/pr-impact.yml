@@ -1,0 +1,40 @@
+# Example workflow (documentation only, it is not run by this repository's CI).
+# On every pull request: list the routes the change touches in the job summary, and run only the matching E2E specs.
+# Posting the same Markdown as a pull request comment is up to your own workflow step.
+#
+# The package is not on the npm registry yet, so it is installed from GitHub (the `prepare` script
+# builds it). Pin a release tag instead of the default branch once you have picked one,
+# for example github:LeeGyeongPil/next-route-impact#v0.1.0
+name: pr-impact
+on: pull_request
+jobs:
+  impact:
+    runs-on: ubuntu-latest
+    env:
+      BASE_REF: ${{ github.base_ref }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0   # --git needs the merge-base with the target branch
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Install next-route-impact from GitHub
+        run: npm install --no-save github:LeeGyeongPil/next-route-impact
+      - name: Which routes does this pull request touch?
+        run: npx next-route-impact --git --base "origin/$BASE_REF" --markdown >> "$GITHUB_STEP_SUMMARY"
+      - name: Pick the E2E specs
+        id: select
+        run: |
+          npx next-route-impact --git --base "origin/$BASE_REF" --tests --json > impact.json
+          echo "run_all=$(node -p "require('./impact.json').tests.runAll")" >> "$GITHUB_OUTPUT"
+          echo "specs=$(node -p "require('./impact.json').tests.files.join(' ')")" >> "$GITHUB_OUTPUT"
+      - name: Run the selected Playwright specs
+        if: steps.select.outputs.run_all == 'false' && steps.select.outputs.specs != ''
+        env:
+          SPECS: ${{ steps.select.outputs.specs }}   # passed through env, not pasted into the script
+        run: npx playwright test $SPECS
+      - name: Run every Playwright spec
+        if: steps.select.outputs.run_all == 'true'
+        run: npx playwright test
