@@ -1,0 +1,11 @@
+{
+  "tests": {
+    "/": ["e2e/home.spec.ts"],
+    "/about": ["e2e/home.spec.ts"],
+    "/products/**": ["e2e/shop.spec.ts"],
+    "/shop/**": ["e2e/shop.spec.ts"],
+    "/docs/**": ["e2e/docs.spec.ts"],
+    "/dashboard/**": ["e2e/dashboard/*.spec.ts"],
+    "/api/**": ["e2e/api.spec.ts"]
+  }
+}

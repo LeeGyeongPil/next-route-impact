@@ -1,0 +1,14 @@
+{
+  // Practice app for next-route-impact. JSONC comments and trailing commas are allowed in tsconfig.
+  "compilerOptions": {
+    // No baseUrl on purpose: "paths" alone is the modern setup and the tool must still resolve it.
+    "paths": {
+      "@/*": ["./src/*"],
+      "@ui": ["./src/components/ui/index.ts"],
+    },
+    "jsx": "preserve",
+    "moduleResolution": "bundler",
+    "module": "esnext",
+    "allowJs": true,
+  },
+}
