@@ -1,0 +1,62 @@
+{
+  "name": "next-route-impact",
+  "version": "0.1.0",
+  "description": "Static analysis for Next.js: which URLs and APIs does this change touch, and which E2E specs should run.",
+  "type": "module",
+  "license": "MIT",
+  "author": "LeeGyeongPil",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LeeGyeongPil/next-route-impact.git"
+  },
+  "homepage": "https://github.com/LeeGyeongPil/next-route-impact#readme",
+  "bugs": {
+    "url": "https://github.com/LeeGyeongPil/next-route-impact/issues"
+  },
+  "keywords": [
+    "nextjs",
+    "next",
+    "route",
+    "impact",
+    "affected",
+    "playwright",
+    "ci",
+    "import-graph",
+    "app-router"
+  ],
+  "bin": {
+    "next-route-impact": "dist/cli.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "README.ko.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepare": "tsc -p tsconfig.json",
+    "test": "npm run build && node scripts/run-tests.mjs",
+    "start": "node dist/cli.js --lang en --root examples/shop-app src/lib/format.ts"
+  },
+  "dependencies": {
+    "oxc-parser": "0.158.0",
+    "oxc-resolver": "11.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "20.19.43",
+    "typescript": "6.0.3"
+  }
+}
