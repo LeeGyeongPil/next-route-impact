@@ -22,11 +22,28 @@ export const DEFAULT_RUN_ALL_ON = [
 
 export const DEFAULT_IGNORE = ['**/*.md', '.github/**'];
 
+// Remembers where an ignore list came from: only lists made by defaultConfig() are in here.
+// A list the user wrote (config file or library option) is never in here, even with the same patterns,
+// so "the user asked to ignore this" stays different from "the default ignores this". Config keeps its shape.
+const defaultIgnoreLists = new WeakSet<string[]>();
+
 export function defaultConfig(): Config {
-  return { tests: {}, runAllOn: [...DEFAULT_RUN_ALL_ON], ignore: [...DEFAULT_IGNORE] };
+  const ignore = [...DEFAULT_IGNORE];
+  defaultIgnoreLists.add(ignore);
+  return { tests: {}, runAllOn: [...DEFAULT_RUN_ALL_ON], ignore };
 }
 
-const KNOWN_FIELDS = new Set(['tests', 'runAllOn', 'ignore', 'tsconfig']);
+/**
+ * True when `ignore` is the built-in default list: made by defaultConfig() (directly or through loadConfig()
+ * without an `ignore` field) and not edited in place. A list the user wrote is never the default.
+ */
+export function isDefaultIgnore(ignore: string[]): boolean {
+  if (!defaultIgnoreLists.has(ignore)) return false;
+  // A default list that was edited in place (push, splice ...) counts as the user's own list.
+  return ignore.length === DEFAULT_IGNORE.length && ignore.every((pattern, index) => pattern === DEFAULT_IGNORE[index]);
+}
+
+const KNOWN_FIELDS = new Set(['tests', 'runAllOn', 'ignore', 'tsconfig', 'pageExtensions']);
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
@@ -64,6 +81,10 @@ export function parseConfig(raw: unknown, fileLabel: string): Config {
   if (obj.tsconfig !== undefined) {
     if (typeof obj.tsconfig !== 'string') fail('tsconfig');
     config.tsconfig = obj.tsconfig as string;
+  }
+  if (obj.pageExtensions !== undefined) {
+    if (!isStringArray(obj.pageExtensions)) fail('pageExtensions');
+    config.pageExtensions = obj.pageExtensions as string[];
   }
   return config;
 }

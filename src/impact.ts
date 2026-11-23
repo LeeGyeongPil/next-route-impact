@@ -1,6 +1,7 @@
 import path from 'node:path';
-import { withDefaults } from './config.js';
-import { isFile } from './fsutil.js';
+import { isDefaultIgnore, withDefaults } from './config.js';
+import { droppedPageExtensions, isFile, normalizePageExtensions } from './fsutil.js';
+import { readPageExtensions } from './nextconfig.js';
 import { buildGraph } from './graph.js';
 import type { Graph, RevEdge } from './graph.js';
 import { matchAny } from './glob.js';
@@ -31,7 +32,27 @@ export async function analyze(options: AnalyzeOptions): Promise<ImpactReport> {
 
 export function analyzeSync(options: AnalyzeOptions): ImpactReport {
   const config = withDefaults(options.config);
-  const layout = loadProject(options.root, config.tsconfig);
+  // pageExtensions: the config file wins; otherwise a literal array in next.config.* (never executed).
+  const notes: ImpactReport['notes'] = [];
+  let pageExtensions: string[] | null = null;
+  const noteDropped = (values: string[]): void => {
+    const dropped = droppedPageExtensions(values);
+    if (dropped.length > 0) notes.push({ code: 'page-extensions-dropped', params: { values: dropped.join(', ') } });
+  };
+  if (config.pageExtensions !== undefined) {
+    const configured = normalizePageExtensions(config.pageExtensions);
+    noteDropped(config.pageExtensions);
+    pageExtensions = configured.length > 0 ? configured : null;
+  } else {
+    const probe = loadProject(options.root, config.tsconfig);
+    const read = readPageExtensions(probe.root);
+    if (read.type === 'static') {
+      const found = normalizePageExtensions(read.values);
+      noteDropped(read.values);
+      pageExtensions = found.length > 0 ? found : null;
+    } else if (read.type === 'computed') notes.push({ code: 'page-extensions-not-static', params: { file: read.file } });
+  }
+  const layout = loadProject(options.root, config.tsconfig, options.root, pageExtensions);
   const root = layout.root;
   const includeTypes = options.includeTypes ?? false;
   const symbolPrecision = options.symbolPrecision ?? true;
@@ -50,7 +71,6 @@ export function analyzeSync(options: AnalyzeOptions): ImpactReport {
     .filter((entry): entry is Leaf => entry.type === 'leaf')
     .sort((a, b) => leafRank(a) - leafRank(b));
 
-  const notes: ImpactReport['notes'] = [];
   for (const entry of entries.values()) {
     if (entry.type === 'proxy' && entry.name === 'middleware') {
       notes.push({ code: 'middleware-renamed', params: { file: entry.file } });
@@ -183,9 +203,19 @@ export function analyzeSync(options: AnalyzeOptions): ImpactReport {
     }
   };
 
+  // The default "**/*.md" ignore must not hide a Markdown page that pageExtensions makes a route entry.
+  // An ignore list the user wrote (config file field or library option) always wins. Whether the list is the
+  // default is tracked by where it was made, not by `options.config?.ignore`: the CLI always passes loadConfig(),
+  // whose `ignore` is filled with the default list when the config file has no `ignore` field.
+  const ignoreIsDefault = isDefaultIgnore(config.ignore);
+  const markdownPages = (layout.pageExtensions ?? []).includes('.md');
   const effective: ChangedFile[] = options.changed
     .map((change) => ({ ...change, path: normalize(change.path) }))
-    .filter((change) => !matchAny(config.ignore, change.path))
+    .filter((change) => {
+      if (!matchAny(config.ignore, change.path)) return true;
+      if (!ignoreIsDefault || !markdownPages || !change.path.endsWith('.md')) return false;
+      return classify(change.path, layout) !== null; // only route entries such as app/docs/page.md
+    })
     .sort((a, b) => a.path.localeCompare(b.path));
 
   for (const change of effective) {

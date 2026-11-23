@@ -52,3 +52,28 @@ export function walkFiles(root: string): string[] {
 export function isSourceFile(rel: string): boolean {
   return SOURCE_EXTENSIONS.includes(path.posix.extname(rel));
 }
+
+/** Extensions whose files are read with the light-weight MDX import scan instead of a JS parser. */
+export const MARKDOWN_EXTENSIONS = ['.mdx', '.md'];
+
+export function isMarkdownFile(rel: string): boolean {
+  return MARKDOWN_EXTENSIONS.includes(path.posix.extname(rel));
+}
+
+/** Values that `normalizePageExtensions` drops (for example "page.tsx"). */
+export function droppedPageExtensions(values: string[]): string[] {
+  return values.filter((value) => !/^\.[A-Za-z0-9]+$/.test('.' + value.replace(/^\./, '')));
+}
+
+/**
+ * Normalise `pageExtensions` values ("mdx", ".mdx") to dotted form (".mdx").
+ * Entries that are not a plain extension (for example "page.tsx") are dropped.
+ */
+export function normalizePageExtensions(values: string[]): string[] {
+  const out: string[] = [];
+  for (const value of values) {
+    const ext = '.' + value.replace(/^\./, '');
+    if (/^\.[A-Za-z0-9]+$/.test(ext) && !out.includes(ext)) out.push(ext);
+  }
+  return out;
+}

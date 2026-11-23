@@ -78,6 +78,8 @@ Exit codes: 0 ok, 1 runtime error, 2 usage error, 3 uncertain items (with --fail
   'unresolved.non-literal-dynamic-import': 'dynamic import with a computed path',
   'unresolved.not-found': 'import path not found',
   'parse.errors': '{count} syntax error(s)',
+  'note.page-extensions-dropped': 'pageExtensions values {values} are not plain extensions (such as "mdx") and are ignored.',
+  'note.page-extensions-not-static': '{file} sets pageExtensions to a computed value, which is not read. Defaults are used; list the extensions under "pageExtensions" in next-route-impact.config.json.',
   'note.middleware-renamed': '{file} uses the old middleware name; Next.js 16 renamed it to proxy.ts.',
 
   'tests.heading': 'Test selection',

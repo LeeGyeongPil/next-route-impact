@@ -62,7 +62,7 @@ export interface ParseErrorItem {
 
 /** A note is a catalog id plus parameters; the CLI renders it in the chosen language. */
 export interface ReportNote {
-  code: 'middleware-renamed';
+  code: 'middleware-renamed' | 'page-extensions-not-static' | 'page-extensions-dropped';
   params: Record<string, string>;
 }
 
@@ -86,6 +86,8 @@ export interface Config {
   ignore: string[];
   /** tsconfig path, relative to the app root. */
   tsconfig?: string;
+  /** Next.js `pageExtensions` (for example ["tsx", "mdx"]). Wins over what is read from next.config.*. */
+  pageExtensions?: string[];
 }
 
 export interface TestSelection {

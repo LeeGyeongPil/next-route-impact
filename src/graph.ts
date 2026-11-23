@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { parseSync } from 'oxc-parser';
 import { ResolverFactory } from 'oxc-resolver';
-import { isSourceFile, SOURCE_EXTENSIONS, toPosix, walkFiles } from './fsutil.js';
+import { isSourceFile, MARKDOWN_EXTENSIONS, SOURCE_EXTENSIONS, toPosix, walkFiles } from './fsutil.js';
+import { extractMdxImports } from './mdximports.js';
 import { matchesAlias, readPathAliases } from './jsonc.js';
 import type { ProjectLayout } from './project.js';
 import type { EdgeKind, ParseErrorItem, UnresolvedImport } from './types.js';
@@ -76,7 +77,9 @@ function isBarePackage(specifier: string): boolean {
 /** Read every source file below the app root, extract imports with oxc-parser, resolve them with oxc-resolver. */
 export function buildGraph(layout: ProjectLayout, options: { includeTypes: boolean }): Graph {
   const root = layout.root;
-  const files = walkFiles(root).filter(isSourceFile);
+  // .mdx/.md files join the graph only when pageExtensions lists them.
+  const markdownExts = (layout.pageExtensions ?? []).filter((ext) => MARKDOWN_EXTENSIONS.includes(ext));
+  const files = walkFiles(root).filter((rel) => isSourceFile(rel) || markdownExts.includes(path.posix.extname(rel)));
   const tsconfigFile = layout.tsconfig ? path.join(root, layout.tsconfig) : null;
   const aliases = tsconfigFile ? readPathAliases(tsconfigFile) : [];
 
@@ -92,6 +95,23 @@ export function buildGraph(layout: ProjectLayout, options: { includeTypes: boole
   const unresolved: UnresolvedImport[] = [];
   const parseErrors: ParseErrorItem[] = [];
 
+  /** Resolve the collected requests of one file and store them as reverse edges. */
+  const resolveRequests = (rel: string, abs: string, requests: Request[]): void => {
+    for (const request of requests) {
+      if (request.kind === 'type' && !options.includeTypes) continue;
+      const result = resolver.sync(path.dirname(abs), request.specifier);
+      if (result.path) {
+        const target = toPosix(path.relative(root, result.path));
+        if (target.startsWith('..') || target.split('/').includes('node_modules')) continue;
+        const list = rev.get(target) ?? [];
+        list.push({ from: rel, kind: request.kind, names: request.names, pairs: request.pairs });
+        rev.set(target, list);
+      } else if (!isBarePackage(request.specifier) || matchesAlias(request.specifier, aliases)) {
+        unresolved.push({ file: rel, specifier: request.specifier, reason: 'not-found' });
+      }
+    }
+  };
+
   for (const rel of files) {
     const abs = path.join(root, rel);
     let source: string;
@@ -100,11 +120,22 @@ export function buildGraph(layout: ProjectLayout, options: { includeTypes: boole
     } catch {
       continue;
     }
+    const requests: Request[] = [];
+
+    if (markdownExts.includes(path.posix.extname(rel))) {
+      // MDX: regex-level scan of top-level imports; exports are unknown, so every importer counts as affected.
+      for (const item of extractMdxImports(source)) {
+        requests.push({ specifier: item.specifier, kind: item.typeOnly ? 'type' : 'static', names: null, pairs: null });
+      }
+      exportsOf.set(rel, null);
+      resolveRequests(rel, abs, requests);
+      continue;
+    }
+
     const parsed = parseSync(abs, source);
     if (parsed.errors.length > 0) {
       parseErrors.push({ file: rel, count: parsed.errors.length, message: parsed.errors[0]?.message ?? '' });
     }
-    const requests: Request[] = [];
 
     for (const item of parsed.module.staticImports as unknown as StaticImport[]) {
       const wholeTypeOnly = /^import\s+type[\s{*]/.test(source.slice(item.start, item.end));
@@ -145,19 +176,7 @@ export function buildGraph(layout: ProjectLayout, options: { includeTypes: boole
       else unresolved.push({ file: rel, specifier: raw, reason: 'non-literal-dynamic-import' });
     }
 
-    for (const request of requests) {
-      if (request.kind === 'type' && !options.includeTypes) continue;
-      const result = resolver.sync(path.dirname(abs), request.specifier);
-      if (result.path) {
-        const target = toPosix(path.relative(root, result.path));
-        if (target.startsWith('..') || target.split('/').includes('node_modules')) continue;
-        const list = rev.get(target) ?? [];
-        list.push({ from: rel, kind: request.kind, names: request.names, pairs: request.pairs });
-        rev.set(target, list);
-      } else if (!isBarePackage(request.specifier) || matchesAlias(request.specifier, aliases)) {
-        unresolved.push({ file: rel, specifier: request.specifier, reason: 'not-found' });
-      }
-    }
+    resolveRequests(rel, abs, requests);
   }
   return { files, rev, exportsOf, unresolved, parseErrors };
 }

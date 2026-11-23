@@ -1,6 +1,6 @@
 import path from 'node:path';
 import type { ProjectLayout } from './project.js';
-import { isSourceFile } from './fsutil.js';
+import { isMarkdownFile, isSourceFile } from './fsutil.js';
 import type { RouteKind, RouterKind } from './types.js';
 
 /** A file Next.js treats specially: a leaf route, a wrapper (layout ...) or the proxy/middleware file. */
@@ -74,11 +74,16 @@ function under(rel: string, dir: string): string[] | null {
 
 /** Classify a root-relative path. Pure: does not touch the file system. */
 export function classify(rel: string, layout: ProjectLayout): Entry | null {
-  if (!isSourceFile(rel)) return null;
+  const ext = path.posix.extname(rel);
+  const extensions = layout.pageExtensions;
+  // Without `pageExtensions` only JS/TS files count, exactly as before.
+  if (!isSourceFile(rel) && !(extensions !== null && isMarkdownFile(rel) && extensions.includes(ext))) return null;
+  const isPageFile = extensions === null || extensions.includes(ext);
 
   if (layout.appDir !== null) {
     const parts = under(rel, layout.appDir);
     if (parts) {
+      if (!isPageFile) return null;
       const fileName = parts.pop() as string;
       const name = stripExtension(fileName);
       if (parts.some((segment) => segment.startsWith('_'))) return null; // private folder
@@ -106,6 +111,7 @@ export function classify(rel: string, layout: ProjectLayout): Entry | null {
   if (layout.pagesDir !== null) {
     const parts = under(rel, layout.pagesDir);
     if (parts) {
+      if (!isPageFile) return null;
       const last = stripExtension(parts.pop() as string);
       if (parts.length === 0 && (last === '_app' || last === '_document')) {
         return { type: 'wrapper', router: 'pages', name: last, file: rel, scope: '' };

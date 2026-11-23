@@ -14,10 +14,17 @@ export interface ProjectLayout {
   proxyDirs: string[];
   /** tsconfig path relative to root, if any. */
   tsconfig: string | null;
+  /** Dotted `pageExtensions` (".tsx", ".mdx" ...) when configured; null = Next.js defaults (unchanged behaviour). */
+  pageExtensions: string[] | null;
 }
 
 /** Resolve the app root and find app/ and pages/ (root first, then src/, like Next.js). */
-export function loadProject(rootInput: string, tsconfigOption?: string, label: string = rootInput): ProjectLayout {
+export function loadProject(
+  rootInput: string,
+  tsconfigOption?: string,
+  label: string = rootInput,
+  pageExtensions: string[] | null = null,
+): ProjectLayout {
   if (!isDirectory(rootInput)) throw new ImpactError('error.rootNotFound', { root: label }, 1);
   const root = realpathSync(rootInput);
   const pick = (name: string): string | null => {
@@ -38,5 +45,5 @@ export function loadProject(rootInput: string, tsconfigOption?: string, label: s
       break;
     }
   }
-  return { root, appDir, pagesDir, proxyDirs: ['', 'src'], tsconfig };
+  return { root, appDir, pagesDir, proxyDirs: ['', 'src'], tsconfig, pageExtensions };
 }

@@ -80,6 +80,8 @@ export const ko: Record<MsgId, string> = {
   'unresolved.non-literal-dynamic-import': '경로를 계산하는 동적 import',
   'unresolved.not-found': 'import 경로를 찾지 못함',
   'parse.errors': '문법 오류 {count}개',
+  'note.page-extensions-dropped': 'pageExtensions 값 {values} 은(는) 순수 확장자(예: "mdx")가 아니라 무시합니다.',
+  'note.page-extensions-not-static': '{file} 의 pageExtensions 가 계산된 값이라 읽지 못했습니다. 기본값을 사용합니다. next-route-impact.config.json 의 "pageExtensions" 에 확장자를 직접 적어 주세요.',
   'note.middleware-renamed': '{file} 은(는) 예전 이름(middleware)을 씁니다. Next.js 16 에서 proxy.ts 로 이름이 바뀌었습니다.',
 
   'tests.heading': '테스트 선택',
