@@ -213,6 +213,7 @@ console.log(selectTests(report, loadConfig(root), root).files);
 | `runAllOn` | 바뀐 파일이 이 글롭에 맞으면 `runAll` | `next.config.*`, `package.json`, 락 파일, `tsconfig*.json`, `.env*`, `tailwind.config.*`, `postcss.config.*` |
 | `ignore` | 바뀐 파일이 이 글롭에 맞으면 무시 | `**/*.md`, `.github/**` |
 | `tsconfig` | 앱 루트 기준 tsconfig 경로 | 자동 탐지 |
+| `pageExtensions` | 페이지 파일 확장자, 예: `["tsx", "ts", "mdx"]`. `next.config.*` 보다 우선 | `next.config.*` 에서 읽음, 없으면 Next.js 기본값 |
 
 ## 출력
 
@@ -289,7 +290,8 @@ flowchart LR
 
 - import 가 아닌 결합은 보이지 않습니다: `fetch('/api/...')` 의 URL 문자열, `rewrites`, 환경변수, CSS-in-JS 문자열, `public/` 아래 자산. 바뀐 자산은 `uncertain` 으로, 설정 수준 파일은 `runAll` 로 다룹니다.
 - 계산된 `import()` 경로는 간선을 숨깁니다. 변경·도달한 파일 안의 것만 보고하므로, 앱 다른 곳의 동적 import 가 내 변경으로 가는 간선을 숨기고 있을 수 있습니다.
-- 0.1.0 에서 다루지 않는 것: 모노레포 워크스페이스 패키지, `pageExtensions`, 삭제·이름 변경된 파일의 옛 importer 추적, stdin 입력, 바로 쓰는 GitHub Action, `--mermaid` 출력.
+- 0.1.0 에서 다루지 않는 것: 모노레포 워크스페이스 패키지, 삭제·이름 변경된 파일의 옛 importer 추적, stdin 입력, 바로 쓰는 GitHub Action, `--mermaid` 출력.
+- `pageExtensions`: `next.config.*` 의 설정 객체 안에 직접 적은 문자열 배열 리터럴은 파일을 실행하지 않고 읽습니다. 변수나 단축 속성(`{ pageExtensions }`)을 포함한 계산된 값은 읽지 못하므로(참고 메시지 출력) `next-route-impact.config.json` 의 `pageExtensions` 에 직접 적으세요. `mdx`/`md` 가 있으면 `page.mdx` 를 라우트 진입 파일로 보고, MDX 의 코드 펜스 밖 최상위 `import`/`export ... from` 줄을 import 그래프에 넣습니다. JSX 표현식 안의 import 는 보지 못합니다. `page.tsx` 같은 점이 들어간 값은 지원하지 않아 무시합니다(참고 메시지 출력). `md` 가 있으면 기본 ignore `**/*.md` 에도 불구하고 변경된 `page.md` 를 분석하며(CLI·API 모두), `ignore` 를 직접 지정하면 기본값과 같은 목록이어도 그 설정이 우선합니다. API 는 객체 동일성으로 이를 판단하므로 `loadConfig()` 결과의 깊은 복사(`structuredClone`/JSON)는 직접 지정한 목록으로 취급됩니다.
 - 선언한 최소 버전은 Node.js 20 이지만 이 버전을 만든 환경에서는 실행해 보지 못했습니다. CI 매트릭스가 Node 20·22 를 확인합니다.
 - Next.js 라우팅 규칙만 이해합니다(App Router, Pages Router, `proxy.ts` 와 구 `middleware.ts`).
 
@@ -315,7 +317,7 @@ npm install
 npm test
 ```
 
-`npm test` 는 CLI 를 빌드하고 `node:test` 로 120개 테스트를 돌립니다. 버그·제안은 이슈로 남겨 주세요. 변경 기록은 [CHANGELOG.md](CHANGELOG.md).
+`npm test` 는 CLI 를 빌드하고 `node:test` 로 132개 테스트를 돌립니다. 버그·제안은 이슈로 남겨 주세요. 변경 기록은 [CHANGELOG.md](CHANGELOG.md).
 
 ## 라이선스
 

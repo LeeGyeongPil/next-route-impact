@@ -211,6 +211,7 @@ Output above is real (run against the built `dist/`, importing by path because t
 | `runAllOn` | Changed files matching these globs set `runAll` | `next.config.*`, `package.json`, lockfiles, `tsconfig*.json`, `.env*`, `tailwind.config.*`, `postcss.config.*` |
 | `ignore` | Changed files matching these globs are ignored | `**/*.md`, `.github/**` |
 | `tsconfig` | tsconfig path relative to the app root | auto-detected |
+| `pageExtensions` | Page file extensions, for example `["tsx", "ts", "mdx"]`; wins over `next.config.*` | read from `next.config.*`, else Next.js defaults |
 
 ## Output
 
@@ -287,7 +288,8 @@ Check each project's own documentation for what it supports today.
 
 - Couplings that are not imports are invisible: URL strings in `fetch('/api/...')`, `rewrites`, environment variables, CSS-in-JS strings, assets under `public/`. Changed assets are reported as `uncertain`; config-level files trigger `runAll`.
 - A computed `import()` path hides edges. Only the ones in changed or reached files are reported, so a dynamic import elsewhere in the app can still hide an edge to your change.
-- Not covered in 0.1.0: workspace packages in monorepos, `pageExtensions`, finding the old importers of a deleted or renamed file, stdin input, a ready-made GitHub Action, `--mermaid` output.
+- Not covered in 0.1.0: workspace packages in monorepos, finding the old importers of a deleted or renamed file, stdin input, a ready-made GitHub Action, `--mermaid` output.
+- `pageExtensions`: a literal array written directly inside the config object in `next.config.*` is read without running the file; a computed value, including a variable or the shorthand `{ pageExtensions }`, is not read (a note is printed) - set `pageExtensions` in `next-route-impact.config.json` instead. With `mdx`/`md` listed, `page.mdx` counts as a route entry and top-level `import`/`export ... from` lines of MDX files (outside code fences) join the import graph; imports inside JSX expressions are not seen. Dotted values such as `page.tsx` are not supported and are ignored (a note is printed). With `md` listed, a changed `page.md` is analysed even though `**/*.md` is ignored by default (CLI and API alike); an `ignore` list you set yourself overrides that, even one equal to the default. The API decides this by object identity, so a deep copy (`structuredClone`/JSON) of `loadConfig()` counts as your own list.
 - Node.js 20 is the declared minimum, but it was not run on the machine that built this version; the CI matrix covers Node 20 and 22.
 - Only Next.js routing conventions are understood (App Router, Pages Router, `proxy.ts` and the older `middleware.ts`).
 
@@ -311,7 +313,7 @@ npm install
 npm test
 ```
 
-`npm test` builds the CLI and runs 120 tests with `node:test`. Bugs and suggestions are welcome as issues. Changes are recorded in [CHANGELOG.md](CHANGELOG.md).
+`npm test` builds the CLI and runs 132 tests with `node:test`. Bugs and suggestions are welcome as issues. Changes are recorded in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
