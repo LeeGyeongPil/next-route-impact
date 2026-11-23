@@ -6,6 +6,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-23
+
+### Added
+- `pageExtensions` support: a literal array in `next.config.*` (read statically, never executed) or the new
+  `pageExtensions` field of the config file (which wins) makes files such as `app/guide/page.mdx` route entries.
+  Top-level `import`/`export ... from` lines of `.mdx`/`.md` files (outside code fences) join the import graph.
+  A computed or shorthand `pageExtensions` value is not read; the report carries a note (set it in the config file instead).
+  Dotted values such as `page.tsx` are ignored with a note. With `md` listed, a changed `page.md` is analysed despite the default `**/*.md` ignore, from the CLI and the API
+  (an `ignore` list you set yourself wins, even one equal to the default).
+  Without `pageExtensions` results are unchanged.
+
 ## [0.1.0] - 2026-11-12
 
 ### Added
